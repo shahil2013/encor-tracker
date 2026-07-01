@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ENCOR 350-401 v1.2 :: Readiness Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0B0F12;
+    --panel:#11171C;
+    --panel-2:#161D23;
+    --line:#26323B;
+    --text:#D7E2E6;
+    --dim:#7E939E;
+    --green:#3DDC84;
+    --amber:#E8A33D;
+    --cyan:#52C8E8;
+    --red:#E8615C;
+    --purple:#B490E8;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;background:var(--bg);color:var(--text);
+    font-family:'JetBrains Mono', monospace;font-size:14px;line-height:1.5;
+    padding:24px 16px 80px;
+  }
+  .wrap{max-width:940px;margin:0 auto;}
+
+  .prompt{color:var(--dim);font-size:12px;margin-bottom:4px;}
+  .prompt .user{color:var(--green);}
+  .prompt .path{color:var(--cyan);}
+  h1{font-size:20px;font-weight:800;margin:0 0 4px;letter-spacing:0.3px;}
+  .sub{color:var(--dim);font-size:12px;margin-bottom:14px;}
+
+  .legend{
+    display:flex;gap:16px;flex-wrap:wrap;font-size:11px;color:var(--dim);
+    margin-bottom:18px;border:1px solid var(--line);border-radius:4px;
+    padding:10px 12px;background:var(--panel);
+  }
+  .legend b{color:var(--text);}
+  .legend .r{color:var(--cyan);}
+  .legend .l{color:var(--amber);}
+  .legend .q{color:var(--green);}
+
+  .overall{
+    background:var(--panel);border:1px solid var(--line);border-radius:4px;
+    padding:18px 18px 16px;margin-bottom:22px;
+  }
+  .overall-top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px;flex-wrap:wrap;gap:8px;}
+  .overall-label{color:var(--dim);font-size:12px;text-transform:uppercase;letter-spacing:1px;}
+  .overall-score{font-size:28px;font-weight:800;color:var(--green);}
+  .overall-score.low{color:var(--red);}
+  .overall-score.mid{color:var(--amber);}
+  .barline{font-size:15px;white-space:pre;overflow-x:auto;}
+  .barline .filled{color:var(--green);}
+  .barline .empty{color:var(--line);}
+  .gate{margin-top:10px;font-size:12px;color:var(--dim);}
+  .gate.pass{color:var(--green);}
+
+  .domain{background:var(--panel);border:1px solid var(--line);border-radius:4px;margin-bottom:14px;overflow:hidden;}
+  .domain-head{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;cursor:pointer;background:var(--panel-2);user-select:none;}
+  .domain-head:hover{background:#1B232A;}
+  .domain-title{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;}
+  .domain-num{color:var(--dim);font-size:12px;}
+  .domain-name{font-weight:700;font-size:14px;}
+  .domain-weight{font-size:11px;color:var(--bg);background:var(--cyan);border-radius:3px;padding:1px 6px;font-weight:700;}
+  .domain-meta{display:flex;align-items:center;gap:10px;font-size:12px;color:var(--dim);}
+  .domain-pct{font-weight:700;}
+  .domain-pct.ok{color:var(--green);}
+  .chevron{transition:transform 0.15s ease;color:var(--dim);}
+  .domain.open .chevron{transform:rotate(90deg);}
+
+  .domain-bar{height:3px;background:var(--line);}
+  .domain-bar-fill{height:100%;background:var(--cyan);transition:width 0.2s ease;}
+  .domain-bar-fill.ok{background:var(--green);}
+
+  .items{max-height:0;overflow:hidden;transition:max-height 0.3s ease;}
+  .domain.open .items{max-height:20000px;}
+
+  .topic{padding:12px 16px 6px 16px;}
+  .topic-head{
+    display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:6px;
+    margin-bottom:6px;border-bottom:1px dashed var(--line);padding-bottom:6px;
+  }
+  .topic-label{font-size:12px;color:var(--amber);font-weight:700;}
+  .topic-chapter{font-size:11px;color:var(--purple);}
+  .topic-chapter b{color:var(--purple);}
+
+  .lab-toggle{
+    font-size:11px;color:var(--cyan);background:none;border:1px solid var(--line);
+    border-radius:3px;padding:3px 8px;cursor:pointer;font-family:inherit;
+    margin:2px 0 8px;display:inline-flex;align-items:center;gap:4px;
+  }
+  .lab-toggle:hover{border-color:var(--cyan);}
+  .lab-toggle .arrow{transition:transform 0.15s ease;}
+  .lab-toggle.open .arrow{transform:rotate(90deg);}
+  .lab-detail{
+    display:none;background:var(--bg);border:1px solid var(--line);border-left:2px solid var(--cyan);
+    border-radius:3px;padding:10px 12px;margin:0 0 10px;font-size:12px;color:var(--text);
+    white-space:pre-wrap;line-height:1.55;
+  }
+  .lab-detail.show{display:block;}
+  .lab-detail b{color:var(--cyan);}
+
+  .item{display:flex;flex-direction:column;padding:8px 0 8px 4px;border-top:1px solid #1A2127;}
+  .item:first-child{border-top:none;}
+  .item-row{display:flex;align-items:flex-start;gap:10px;}
+  .checks{display:flex;gap:5px;flex-shrink:0;margin-top:1px;}
+  .chk{display:flex;flex-direction:column;align-items:center;gap:2px;}
+  .chk-label{font-size:9px;color:var(--dim);font-weight:700;}
+  .chk input[type=checkbox]{
+    appearance:none;width:16px;height:16px;border:1px solid var(--dim);border-radius:3px;
+    background:transparent;cursor:pointer;position:relative;
+  }
+  .chk.r input:checked{background:var(--cyan);border-color:var(--cyan);}
+  .chk.l input:checked{background:var(--amber);border-color:var(--amber);}
+  .chk.q input:checked{background:var(--green);border-color:var(--green);}
+  .chk input:checked::after{
+    content:"";position:absolute;left:4px;top:1px;width:4px;height:8px;
+    border:solid var(--bg);border-width:0 2px 2px 0;transform:rotate(45deg);
+  }
+  .item-text{flex:1;padding-top:1px;}
+  .item.done .item-text{color:var(--dim);}
+  .item-code{color:var(--dim);font-size:11px;margin-right:4px;}
+
+  .notes-toggle{
+    background:none;border:none;color:var(--dim);cursor:pointer;font-family:inherit;
+    font-size:11px;padding:0;margin-left:auto;flex-shrink:0;text-decoration:underline;
+    text-decoration-style:dotted;
+  }
+  .notes-toggle:hover{color:var(--cyan);}
+  .notes-panel{
+    display:none;margin:8px 0 2px 30px;padding:10px 12px;background:var(--bg);
+    border:1px solid var(--line);border-left:2px solid var(--purple);border-radius:3px;
+  }
+  .notes-panel.show{display:block;}
+  .notes-panel textarea{
+    width:100%;min-height:50px;background:var(--panel-2);color:var(--text);
+    border:1px solid var(--line);border-radius:3px;font-family:inherit;font-size:12px;
+    padding:6px 8px;resize:vertical;
+  }
+  .notes-panel textarea::placeholder{color:var(--dim);}
+  .history-row{display:flex;align-items:center;gap:8px;margin-top:8px;flex-wrap:wrap;}
+  .history-label{font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:0.5px;}
+  .history-chips{display:flex;gap:5px;flex-wrap:wrap;}
+  .history-chip{
+    font-size:10px;padding:2px 6px;border-radius:3px;border:1px solid var(--line);
+  }
+  .history-chip.pass{color:var(--green);border-color:var(--green);}
+  .history-chip.fail{color:var(--red);border-color:var(--red);}
+  .history-btns{display:flex;gap:6px;margin-left:auto;}
+  .hbtn{
+    font-size:10px;font-family:inherit;border-radius:3px;padding:3px 8px;cursor:pointer;background:none;
+  }
+  .hbtn.pass{color:var(--green);border:1px solid var(--green);}
+  .hbtn.pass:hover{background:var(--green);color:var(--bg);}
+  .hbtn.fail{color:var(--red);border:1px solid var(--red);}
+  .hbtn.fail:hover{background:var(--red);color:var(--bg);}
+
+  .footer-row{display:flex;justify-content:space-between;align-items:center;margin-top:18px;font-size:11px;color:var(--dim);flex-wrap:wrap;gap:8px;}
+  .reset-btn{background:none;border:1px solid var(--line);color:var(--dim);font-family:inherit;font-size:11px;padding:6px 10px;border-radius:3px;cursor:pointer;}
+  .reset-btn:hover{border-color:var(--red);color:var(--red);}
+  .save-status{color:var(--dim);}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="prompt"><span class="user">shaun@encor-prep</span>:<span class="path">~/350-401-v1.2</span>$ ./domain-tracker.sh --status</div>
+  <h1>ENCOR 350-401 v1.2 — Domain Readiness Tracker</h1>
+  <div class="sub">OCG references are to the 2nd Edition (978-0-13-821676-4). Tap "Lab Setup" for the EVE-NG topology/build for that subtopic. Gate to move on: Quiz passed, not just Read/Lab.</div>
+
+  <div class="legend">
+    <span><b class="r">R</b> = Read OCG section</span>
+    <span><b class="l">L</b> = Lab / teach-back done</span>
+    <span><b class="q">Q</b> = Claude quiz passed</span>
+  </div>
+
+  <div class="overall">
+    <div class="overall-top">
+      <span class="overall-label">Weighted readiness (quiz-passed)</span>
+      <span class="overall-score" id="overallScore">0%</span>
+    </div>
+    <div class="barline" id="overallBar"></div>
+    <div class="gate" id="gateText">Target: 85%+ quiz-passed in every domain before your next attempt.</div>
+  </div>
+
+  <div id="domains"></div>
+
+  <div class="footer-row">
+    <span class="save-status" id="saveStatus">saved to this browser</span>
+    <button class="reset-btn" id="resetBtn">reset all checks</button>
+  </div>
+</div>
+
+<script>
+const DATA = [
+  { id:"arch", num:"1.0", name:"Architecture", weight:15, topics:[
+    { label:"1.1 Design principles", chapter:"Ch 22 — Enterprise Network Architecture",
+      lab:"1.1.a — Teach-back only, no topology. Explain to me: what problem 2-tier vs 3-tier solves, where each breaks down at scale, and where fabric (SD-Access) architecturally diverges from both.\n\n1.1.b — EVE-NG lablet:\n<b>Topology:</b> 2 L3 switches/routers on a shared segment (SW-A, SW-B) + 1 downstream client node.\n<b>Build:</b> HSRP or VRRP between SW-A/SW-B. Add object tracking on the active router tied to its uplink interface.\n<b>Prove it:</b> shut the tracked uplink on the active router, watch standby take the VIP/VMAC without the client losing its gateway.\n<b>Verify:</b> show standby brief (or show vrrp brief), show track, before/after.",
+      items:[
+        ["1.1.a","High-level design: 2-tier, 3-tier, fabric, cloud"],
+        ["1.1.b","High availability: redundancy, FHRP, SSO"]
+      ]},
+    { label:"1.2 Cisco Catalyst SD-WAN", chapter:"Ch 23 — Fabric Technologies (SD-WAN section)",
+      lab:"Teach-back only — no topology unless you happen to have vManage/vSmart/vBond/cEdge images loaded in your EVE-NG Pro library (uncommon/heavy to license). Explain to me the control-plane vs data-plane separation (vSmart/vBond/vManage vs cEdge/vEdge) and one concrete benefit + one limitation of the architecture.",
+      items:[
+        ["1.2.a","SD-WAN control and data plane elements"],
+        ["1.2.b","Benefits and limitations of Catalyst SD-WAN"]
+      ]},
+    { label:"1.3 Cisco SD-Access", chapter:"Ch 23 — Fabric Technologies (SD-Access section)",
+      lab:"Teach-back only — Catalyst Center/DNAC-managed fabric isn't practical to stand up in EVE-NG. Explain to me: fabric border/edge/control-plane node roles, how VXLAN+LISP+SGT combine in the data/control/policy planes, and how a traditional (non-fabric) campus device interoperates with an SD-Access fabric at the border.",
+      items:[
+        ["1.3.a","SD-Access control and data plane elements (fabric, VXLAN, LISP, SGT)"],
+        ["1.3.b","Traditional campus interoperating with SD-Access"]
+      ]},
+    { label:"1.4 QoS", chapter:"Ch 14 — Quality of Service",
+      lab:"EVE-NG lablet:\n<b>Topology:</b> 3 routers in a line (R1-R2-R3), R2 as the bottleneck.\n<b>Build:</b> MQC classify + mark traffic on R1 (class-map/policy-map, set DSCP), apply a policing or shaping policy on R2's egress toward R3.\n<b>Prove it:</b> generate traffic exceeding the policed rate and confirm drops/remarking.\n<b>Verify:</b> show policy-map interface, show class-map, packet captures showing DSCP markings.",
+      items:[
+        ["1.4","Interpret QoS configurations"]
+      ]}
+  ]},
+  { id:"virt", num:"2.0", name:"Virtualization", weight:10, topics:[
+    { label:"2.1 Device virtualization", chapter:"Ch 27 — Virtualization",
+      lab:"Teach-back, grounded in your own Proxmox cluster. Explain to me: type 1 vs type 2 hypervisor and why Proxmox is type 1, what a VM actually virtualizes vs what a container doesn't, and how your Proxmox virtual switching (Linux bridges/OVS) compares conceptually to a hardware switch's forwarding.",
+      items:[
+        ["2.1.a","Hypervisor type 1 vs type 2"],
+        ["2.1.b","Virtual machine concepts"],
+        ["2.1.c","Virtual switching"]
+      ]},
+    { label:"2.2 Data path virtualization", chapter:"Ch 27 (VRF) + Ch 16 — Overlay Tunnels (GRE/IPsec)",
+      lab:"EVE-NG lablet, two parts:\n<b>VRF:</b> 1 router, 2 VRFs (CUSTOMER-A, CUSTOMER-B), interfaces assigned to each. Confirm route tables are isolated. Optional: route-leak one prefix via route-target/static import.\n<b>GRE/IPsec:</b> 2 routers across a simulated public transit router. Build a GRE tunnel first (prove it passes traffic unencrypted via capture), then wrap it in IPsec (crypto map or tunnel protection) and confirm the transit router now only sees ESP, not the inner traffic.\n<b>Verify:</b> show ip vrf, show ip route vrf, show interface tunnel, show crypto ipsec sa.",
+      items:[
+        ["2.2.a","VRF configure/verify"],
+        ["2.2.b","GRE and IPsec tunneling configure/verify"]
+      ]},
+    { label:"2.3 Network virtualization", chapter:"Ch 16 — Overlay Tunnels",
+      lab:"VXLAN — EVE-NG lablet (your stated weak spot):\n<b>Topology:</b> VTEP-A, a transit/core router with no VXLAN awareness, VTEP-B. VTEPs are NOT directly connected — proving VXLAN rides over an L3 underlay.\n<b>Build:</b> underlay routing (OSPF/static) between VTEP loopbacks through the transit router. Static VXLAN, head-end replication, nve1 peering to the other VTEP's loopback.\n<b>Prove it:</b> a host on each side in the same VNI can talk, transit router never sees VXLAN-aware config.\n<b>Verify:</b> show nve peers, show nve vni, show interface vxlan, capture on the transit link showing UDP/4789.\n\nLISP — teach-back only unless your image set has LISP-capable IOS-XE/ASR images (map-server/map-resolver roles are hard to justify building for exam-only depth). Explain to me: EID vs RLOC, the role of map-server/map-resolver/ETR/ITR, and how LISP underlies SD-Access's control plane.",
+      items:[
+        ["2.3.a","LISP"],
+        ["2.3.b","VXLAN"]
+      ]}
+  ]},
+  { id:"infra", num:"3.0", name:"Infrastructure", weight:30, topics:[
+    { label:"3.1 Layer 2", chapter:"Ch 2-5 — STP, Advanced STP Tuning, MST, VLAN Trunks & EtherChannel",
+      lab:"EVE-NG lablet:\n<b>Topology:</b> 3-4 switches in a ring/triangle plus one edge switch with a client port.\n<b>Build:</b> 802.1Q trunks between switches (force a mismatch — native VLAN or trunk mode — to practice troubleshooting it), EtherChannel with mismatched LACP modes on one link to force a bundle failure, MST regions spanning the ring with explicit priority to force a specific root, root guard on the edge switch's uplink and BPDU guard on the client-facing access port.\n<b>Prove it:</b> connect a rogue switch sending superior BPDUs to the access port and watch root guard/BPDU guard react; fix the LACP mismatch and watch the channel come up.\n<b>Verify:</b> show interfaces trunk, show etherchannel summary, show spanning-tree, show spanning-tree inconsistentports.",
+      items:[
+        ["3.1.a","Troubleshoot static/dynamic 802.1Q trunking"],
+        ["3.1.b","Troubleshoot static/dynamic EtherChannels"],
+        ["3.1.c","RSTP / MST + root guard / BPDU guard"]
+      ]},
+    { label:"3.2 Layer 3", chapter:"Ch 6-12 — IP Routing Essentials, EIGRP, OSPF, Advanced OSPF, OSPFv3, BGP, Advanced BGP",
+      lab:"EVE-NG lablet, build in stages:\n<b>OSPF:</b> 4-5 routers, 2+ normal areas, summarization at the ABR, a filtered route via distribute-list/prefix-list, mixed network types (broadcast + point-to-point) on different links, one passive-interface.\n<b>BGP (your stated weak spot):</b> 3 routers, configure neighbors entirely under address-family ipv4 unicast rather than legacy global config. Add a second AF (e.g. a VRF AF) on one router to feel the difference between neighbor activation at the global level vs per-AF.\n<b>PBR:</b> redirect traffic from a specific source subnet to a non-default next hop using a route-map + ip policy route-map.\n<b>Verify:</b> show ip ospf database, show ip ospf neighbor, show bgp ipv4 unicast summary, show bgp all summary, show route-map, traceroute proving PBR took effect.",
+      items:[
+        ["3.2.a","EIGRP vs OSPF: ADV vs link-state, load balancing, path selection, metrics, area types"],
+        ["3.2.b","Configure OSPFv2/v3: multiple normal areas, summarization, filtering, adjacency/network types, passive-interface"],
+        ["3.2.c","Configure/verify eBGP between directly connected neighbors, best-path selection"],
+        ["3.2.d","Policy-based routing concepts"]
+      ]},
+    { label:"3.3 IP Services", chapter:"Ch 13 — Multicast, Ch 15 — IP Services",
+      lab:"EVE-NG lablet, build in stages:\n<b>NTP:</b> 1 router as master (or point at a real NTP source your lab reaches), 2 clients sync to it. PTP if your images support it, otherwise teach-back the concept vs NTP's precision difference.\n<b>NAT/PAT:</b> 1 router, inside/outside interfaces, PAT overload for a subnet plus one static NAT entry.\n<b>FHRP:</b> reuse 1.1.b's HSRP/VRRP build if still standing.\n<b>Multicast:</b> 3-4 routers, PIM-SM with a static RP, IGMPv2 and v3 hosts, verify RPF checks pass. SSM and bidir/MSDP can be teach-back if image count is limiting.\n<b>Verify:</b> show ntp status, show ip nat translations, show ip mroute, show ip pim rp mapping, show ip igmp groups.",
+      items:[
+        ["3.3.a","NTP and PTP configurations"],
+        ["3.3.b","NAT/PAT configuration"],
+        ["3.3.c","FHRP: HSRP, VRRP"],
+        ["3.3.d","Multicast: RPF check, PIM SM, IGMPv2/v3, SSM, bidir, MSDP"]
+      ]}
+  ]},
+  { id:"assur", num:"4.0", name:"Network Assurance", weight:10, topics:[
+    { label:"4.x Tools and platforms", chapter:"Ch 24 — Network Assurance",
+      lab:"EVE-NG lablet, build in stages:\n<b>NetFlow:</b> 2 routers, a traffic source/sink. flow record → flow exporter (point at a loopback IP even without a real collector) → flow monitor → apply with ip flow monitor input on an interface.\n<b>SPAN/RSPAN/ERSPAN:</b> mirror a port to a local capture port (SPAN), then to a remote switch across a trunk (RSPAN) if you have 2+ switches.\n<b>IP SLA:</b> configure an ICMP-echo SLA operation tracked by an object, tie it into a route or FHRP priority change on failure.\n<b>NETCONF/RESTCONF:</b> enable netconf-yang on an IOS-XE image, hit it with a script or curl from a Linux node in the topology.\n<b>Catalyst Center:</b> teach-back only — not practical to run in EVE-NG. Explain to me what AI-powered workflows Catalyst Center adds over traditional monitoring (verify current specifics against INE, the book predates this).\n<b>Verify:</b> show flow monitor name <name> cache, show monitor session, show ip sla configuration, and the raw NETCONF/RESTCONF response payload.",
+      items:[
+        ["4.1","Diagnose with debugs, conditional debugs, traceroute, ping, SNMP, syslog"],
+        ["4.2","Configure/verify Flexible NetFlow"],
+        ["4.3","Configure SPAN / RSPAN / ERSPAN"],
+        ["4.4","Configure/verify IP SLA"],
+        ["4.5","Catalyst Center — traditional + AI-powered workflows (verify against INE, book predates current AI features)"],
+        ["4.6","Configure/verify NETCONF and RESTCONF"]
+      ]}
+  ]},
+  { id:"sec", num:"5.0", name:"Security", weight:20, topics:[
+    { label:"5.1 Device access control", chapter:"Ch 25 — Secure Network Access Control",
+      lab:"EVE-NG lablet:\n<b>Topology:</b> 1-2 routers + a AAA server (spin up a lightweight FreeRADIUS or TACACS+ container/VM on your existing infra, attach it to the EVE-NG topology).\n<b>Build:</b> local line authentication first (console/vty with local users, privilege levels), then AAA with the RADIUS/TACACS+ server as primary and local as fallback.\n<b>Prove it:</b> kill the AAA server reachability and confirm fallback to local auth actually works.\n<b>Verify:</b> show aaa servers, show running-config | section aaa, debug aaa authentication.",
+      items:[
+        ["5.1.a","Lines and local user authentication"],
+        ["5.1.b","Authentication and authorization using AAA"]
+      ]},
+    { label:"5.2 Infrastructure security features", chapter:"Ch 26 — Network Device Access Control and Infrastructure Security",
+      lab:"EVE-NG lablet, two parts:\n<b>ACLs:</b> 1 router, build a numbered/named extended ACL permitting specific traffic and denying the rest, apply inbound on one interface, confirm hit counters increment for both permit and deny.\n<b>CoPP (your stated weak spot):</b> classify control-plane traffic with ACL + class-map (SSH/Telnet vs routing-protocol vs everything else), build a policy-map with police rates per class, apply under control-plane with service-policy input.\n<b>Prove it:</b> generate traffic per class and confirm one class is rate-limited without starving routing protocol traffic.\n<b>Verify:</b> show access-lists, show policy-map control-plane, show policy-map control-plane input class <name>.",
+      items:[
+        ["5.2.a","ACLs"],
+        ["5.2.b","CoPP"]
+      ]},
+    { label:"5.3 / 5.4 API security and design", chapter:"Ch 26 + Ch 28 (REST API security)",
+      lab:"Mostly teach-back — these are concept/component questions, not config-heavy.\n<b>5.3 REST API security:</b> explain to me API keys vs OAuth2 vs basic auth, and why token-based auth is preferred for automation platforms.\n<b>5.4.a-c Threat defense / endpoint / NGFW:</b> teach-back grounded in what you already run — map these concepts onto your own FortiGate deployment (App Control, IPS, endpoint posture) so it's not abstract.\n<b>5.4.d TrustSec/MACsec:</b> teach-back unless your switch images support 802.1x+MACsec (uncommon in EVE-NG). Explain SGT tagging/SXP propagation vs MACsec's link-layer encryption — they solve different problems and get confused on the exam.",
+      items:[
+        ["5.3","REST API security"],
+        ["5.4.a","Threat defense components"],
+        ["5.4.b","Endpoint security components"],
+        ["5.4.c","Next-generation firewall components"],
+        ["5.4.d","TrustSec and MACsec"]
+      ]}
+  ]},
+  { id:"auto", num:"6.0", name:"Automation and AI", weight:15, topics:[
+    { label:"6.1-6.5 Programmability concepts", chapter:"Ch 28 — Foundational Network Programmability Concepts (verify 6.3/6.4/6.5 depth against INE — book predates v1.2 emphasis)",
+      lab:"EVE-NG lablet:\n<b>Topology:</b> 1-2 IOS-XE routers with netconf-yang and restconf enabled + a Linux node (or your own workstation) reaching them.\n<b>Build:</b> write a Python script using requests to hit RESTCONF, pull interface state, and print it as parsed JSON. Then use a NETCONF client (ncclient) to do the same via YANG models.\n<b>6.4 APIs for Catalyst Center/SD-WAN Manager:</b> no live instance needed — use a Cisco DevNet sandbox (free) to make one real authenticated API call and inspect the response structure.\n<b>Prove it:</b> your script correctly parses a real JSON/XML response and prints a specific field, not just a raw dump.\n<b>Verify:</b> paste me your script + actual output.",
+      items:[
+        ["6.1","Interpret basic Python components and scripts"],
+        ["6.2","Construct valid JSON-encoded files"],
+        ["6.3","Data modeling languages: YANG (verify depth against INE, book predates v1.2 emphasis)"],
+        ["6.4","APIs for Cisco Catalyst Center and SD-WAN Manager"],
+        ["6.5","Interpret REST API response codes / payloads (Catalyst Center, RESTCONF)"]
+      ]},
+    { label:"6.6-6.7 Automation tools", chapter:"Ch 29 — Introduction to Automation Tools",
+      lab:"EVE-NG lablet:\n<b>6.6 EEM applet:</b> 1 router, build an EEM applet triggered by an interface-down syslog/track event that logs a custom message and optionally shuts a secondary interface. Prove it fires by forcing the trigger condition.\n<b>6.7 Agent vs agentless:</b> stand up Ansible on a Linux control node in your topology, write a simple playbook that logs into a router (via network_cli or netconf) and pulls show version. You don't need to also build Puppet/Chef/SaltStack hands-on — do those as teach-back comparison (agent-based = persistent agent + pull/push model, agentless = SSH/API on demand, no installed agent).\n<b>Verify:</b> show event manager policy registered, EEM trigger output, your Ansible playbook + play recap.",
+      items:[
+        ["6.6","Construct an EEM applet for config/troubleshooting/data collection"],
+        ["6.7","Compare agent vs. agentless orchestration tools (Puppet/Chef/SaltStack vs Ansible/Bolt)"]
+      ]}
+  ]}
+];
+
+const STORAGE_KEY = "encor-v12-tracker-state-v3";
+let state = {};
+let openNotes = new Set();
+let openLabs = new Set();
+let saveTimer = null;
+
+function fmtDate(iso){
+  const d = new Date(iso);
+  return d.toLocaleDateString('en-US', {month:'short', day:'numeric'});
+}
+
+function debouncedSave(){
+  clearTimeout(saveTimer);
+  const statusEl = document.getElementById("saveStatus");
+  if (statusEl) statusEl.textContent = "saving...";
+  saveTimer = setTimeout(save, 700);
+}
+
+function domainProgress(domain){
+  const ids = [];
+  domain.topics.forEach(t => t.items.forEach(it => ids.push(domain.id+"::"+it[0])));
+  const passed = ids.filter(id => state[id+"::q"]).length;
+  return { passed, total: ids.length, pct: ids.length ? Math.round((passed/ids.length)*100) : 0 };
+}
+
+function weightedOverall(){
+  let acc = 0;
+  DATA.forEach(d => { acc += (domainProgress(d).pct/100) * d.weight; });
+  return Math.round(acc);
+}
+
+function renderBar(pct, width){
+  const filled = Math.round((pct/100) * width);
+  const empty = width - filled;
+  return `<span class="filled">${"█".repeat(filled)}</span><span class="empty">${"░".repeat(empty)}</span> ${pct}%`;
+}
+
+function render(){
+  const overallPct = weightedOverall();
+  const scoreEl = document.getElementById("overallScore");
+  scoreEl.textContent = overallPct + "%";
+  scoreEl.className = "overall-score " + (overallPct >= 85 ? "" : overallPct >= 50 ? "mid" : "low");
+  document.getElementById("overallBar").innerHTML = renderBar(overallPct, 40);
+
+  const gateEl = document.getElementById("gateText");
+  const allDomainsReady = DATA.every(d => domainProgress(d).pct >= 85);
+  if (allDomainsReady && overallPct >= 85){
+    gateEl.textContent = "All domains at 85%+ quiz-passed. You're at the bar — confirm with full timed mocks.";
+    gateEl.className = "gate pass";
+  } else {
+    const weakest = DATA.map(d => ({d, p: domainProgress(d).pct})).sort((a,b)=>a.p-b.p)[0];
+    gateEl.textContent = `Target: 85%+ quiz-passed in every domain. Lowest right now: ${weakest.d.name} (${weakest.p}%).`;
+    gateEl.className = "gate";
+  }
+
+  const container = document.getElementById("domains");
+  container.innerHTML = "";
+  DATA.forEach(domain => {
+    const p = domainProgress(domain);
+    const card = document.createElement("div");
+    card.className = "domain";
+    card.id = "card-" + domain.id;
+
+    const head = document.createElement("div");
+    head.className = "domain-head";
+    head.innerHTML = `
+      <div class="domain-title">
+        <span class="domain-num">${domain.num}</span>
+        <span class="domain-name">${domain.name}</span>
+        <span class="domain-weight">${domain.weight}%</span>
+      </div>
+      <div class="domain-meta">
+        <span class="domain-pct ${p.pct>=85?'ok':''}">${p.passed}/${p.total} Q · ${p.pct}%</span>
+        <span class="chevron">▶</span>
+      </div>
+    `;
+    head.addEventListener("click", () => card.classList.toggle("open"));
+
+    const barWrap = document.createElement("div");
+    barWrap.className = "domain-bar";
+    barWrap.innerHTML = `<div class="domain-bar-fill ${p.pct>=85?'ok':''}" style="width:${p.pct}%"></div>`;
+
+    const itemsWrap = document.createElement("div");
+    itemsWrap.className = "items";
+
+    domain.topics.forEach((topic, tIdx) => {
+      const topicDiv = document.createElement("div");
+      topicDiv.className = "topic";
+      const headDiv = document.createElement("div");
+      headDiv.className = "topic-head";
+      headDiv.innerHTML = `<span class="topic-label">${topic.label}</span><span class="topic-chapter"><b>OCG:</b> ${topic.chapter}</span>`;
+      topicDiv.appendChild(headDiv);
+
+      const labId = domain.id + "-lab-" + tIdx;
+      const toggle = document.createElement("button");
+      toggle.className = "lab-toggle";
+      toggle.innerHTML = `<span class="arrow">▶</span> Lab Setup`;
+      const detail = document.createElement("div");
+      detail.className = "lab-detail";
+      detail.id = labId;
+      detail.innerHTML = topic.lab;
+      if (openLabs.has(labId)){ detail.classList.add("show"); toggle.classList.add("open"); }
+      toggle.addEventListener("click", () => {
+        detail.classList.toggle("show");
+        toggle.classList.toggle("open");
+        if (openLabs.has(labId)) openLabs.delete(labId); else openLabs.add(labId);
+      });
+      topicDiv.appendChild(toggle);
+      topicDiv.appendChild(detail);
+
+      topic.items.forEach(([code, text]) => {
+        const id = domain.id + "::" + code;
+        const historyKey = id + "::history";
+        const notesKey = id + "::notes";
+        const history = state[historyKey] || [];
+        const isDone = !!state[id+"::q"];
+        const row = document.createElement("div");
+        row.className = "item" + (isDone ? " done" : "");
+
+        const itemRow = document.createElement("div");
+        itemRow.className = "item-row";
+        itemRow.innerHTML = `
+          <div class="checks">
+            <div class="chk r"><input type="checkbox" data-id="${id}" data-k="r" ${state[id+"::r"]?"checked":""}><span class="chk-label">R</span></div>
+            <div class="chk l"><input type="checkbox" data-id="${id}" data-k="l" ${state[id+"::l"]?"checked":""}><span class="chk-label">L</span></div>
+            <div class="chk q"><input type="checkbox" data-id="${id}" data-k="q" ${state[id+"::q"]?"checked":""}><span class="chk-label">Q</span></div>
+          </div>
+          <div class="item-text"><span class="item-code">${code}</span>${text}</div>
+          <button class="notes-toggle" type="button">notes${history.length ? " ("+history.length+")" : ""}</button>
+        `;
+        itemRow.querySelectorAll("input").forEach(cb => {
+          cb.addEventListener("change", () => {
+            const key = cb.dataset.id + "::" + cb.dataset.k;
+            state[key] = cb.checked;
+            save();
+            render();
+            document.getElementById("card-"+domain.id).classList.add("open");
+          });
+        });
+
+        const notesPanel = document.createElement("div");
+        notesPanel.className = "notes-panel" + (openNotes.has(id) ? " show" : "");
+        const chips = history.map(h =>
+          `<span class="history-chip ${h.result}">${fmtDate(h.date)} ${h.result === "pass" ? "✓" : "✗"}</span>`
+        ).join("");
+        notesPanel.innerHTML = `
+          <textarea placeholder="What tripped you up here, gaps to revisit before the exam...">${state[notesKey] || ""}</textarea>
+          <div class="history-row">
+            <span class="history-label">Quiz history:</span>
+            <div class="history-chips">${chips || '<span style="color:var(--dim);font-size:10px;">none yet</span>'}</div>
+            <div class="history-btns">
+              <button class="hbtn pass" type="button">+ log pass</button>
+              <button class="hbtn fail" type="button">+ log fail</button>
+            </div>
+          </div>
+        `;
+        const notesToggle = itemRow.querySelector(".notes-toggle");
+        notesToggle.addEventListener("click", () => {
+          notesPanel.classList.toggle("show");
+          if (openNotes.has(id)) openNotes.delete(id); else openNotes.add(id);
+        });
+        notesPanel.querySelector("textarea").addEventListener("input", (e) => {
+          state[notesKey] = e.target.value;
+          debouncedSave();
+        });
+        notesPanel.querySelector(".hbtn.pass").addEventListener("click", () => {
+          const h = state[historyKey] || [];
+          h.push({date: new Date().toISOString(), result: "pass"});
+          state[historyKey] = h;
+          state[id+"::q"] = true;
+          openNotes.add(id);
+          save();
+          render();
+          document.getElementById("card-"+domain.id).classList.add("open");
+        });
+        notesPanel.querySelector(".hbtn.fail").addEventListener("click", () => {
+          const h = state[historyKey] || [];
+          h.push({date: new Date().toISOString(), result: "fail"});
+          state[historyKey] = h;
+          openNotes.add(id);
+          save();
+          render();
+          document.getElementById("card-"+domain.id).classList.add("open");
+        });
+
+        row.appendChild(itemRow);
+        row.appendChild(notesPanel);
+        topicDiv.appendChild(row);
+      });
+      itemsWrap.appendChild(topicDiv);
+    });
+
+    card.appendChild(head);
+    card.appendChild(barWrap);
+    card.appendChild(itemsWrap);
+    container.appendChild(card);
+
+    if (p.pct > 0 && p.pct < 100){ card.classList.add("open"); }
+  });
+}
+
+async function save(){
+  const statusEl = document.getElementById("saveStatus");
+  try{
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    statusEl.textContent = "saved";
+  }catch(e){
+    statusEl.textContent = "save failed";
+    console.error("Storage error:", e);
+  }
+}
+
+async function load(){
+  const statusEl = document.getElementById("saveStatus");
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw){ state = JSON.parse(raw); }
+    statusEl.textContent = "saved to this browser";
+  }catch(e){
+    state = {};
+    statusEl.textContent = "no saved progress yet";
+  }
+  render();
+}
+
+document.getElementById("resetBtn").addEventListener("click", () => {
+  if (confirm("Clear all checked items across every domain?")){
+    state = {};
+    save();
+    render();
+  }
+});
+
+load();
+</script>
+</body>
+</html>
